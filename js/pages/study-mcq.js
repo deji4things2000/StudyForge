@@ -336,12 +336,16 @@ function showError(message) {
 window.selectMcqAnswer = (answer) => {
     if (!currentQuestion) return;
 
-    selectedAnswer = answer;
+    // Normalize selected answer for reliable comparisons
+    selectedAnswer = String(answer || '').trim();
     const buttons = document.querySelectorAll('.mcq-option');
     buttons.forEach(button => {
         button.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
         button.classList.add('border-gray-200');
-        if (button.dataset.answer === answer) {
+
+        // Use dataset if present, otherwise fall back to trimmed button text
+        const btnAnswer = String(button.dataset.answer || button.textContent || '').trim();
+        if (btnAnswer === selectedAnswer) {
             button.classList.remove('border-gray-200');
             button.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
         }
@@ -356,7 +360,7 @@ window.selectMcqAnswer = (answer) => {
 window.submitMcqAnswer = () => {
     if (!currentQuestion || !selectedAnswer) return;
 
-    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+    const isCorrect = String(selectedAnswer).trim() === String(currentQuestion.correctAnswer || '').trim();
     responses.push({
         prompt: currentQuestion.prompt,
         selectedAnswer,
