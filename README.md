@@ -9,6 +9,7 @@
 - Write - Type answers with instant feedback
 - Spell - Audio pronunciation practice
 - Learn - Adaptive learning with checkpoints (Quizlet-style)
+- MCQ Test - Multiple-choice quizzes with per-question feedback and post-quiz review (new)
 
 **Import/Export:**
 - Import from Anki (.txt)
@@ -66,6 +67,13 @@ https://github.com/deji4things2000/StudyForge
 - Must answer correctly 2x to master
 - Adaptive difficulty
 
+### 5. MCQ Test (New)
+- Full multiple-choice test mode that presents one question at a time.
+- Shows right/wrong feedback per question and a detailed review after completion.
+- Options are randomized at runtime while preserving the correct answer mapping.
+- Created for quick assessments and low-stakes testing.
+
+
 ---
 
 ## Features
@@ -85,6 +93,8 @@ https://github.com/deji4things2000/StudyForge
 - Anki format (tab-separated .txt)
 - CSV format (comma-separated)
 - Automatic parsing
+
+	- MCQ CSV import: accepts columns `Question, Option_A, Option_B, Option_C, Option_D` (Option_A is treated as the correct answer). Options are shuffled when presenting quizzes. A CSV template can be created from the UI when needed.
 
 **Export:**
 - One-click Anki export
@@ -155,7 +165,11 @@ StudyForge-Final/
 
 Just upload all files to GitHub and enable Pages. No configuration needed.
 
-**Live in 3 minutes!**
+**Live site:** https://ai-agents-488209.web.app
+
+Changes have also been mirrored to the `StudyForge-Final/` deploy bundle used for hosting.
+
+Note: The sponsor link was removed from the UI and the GitHub repository link updated to `https://github.com/deji4things2000/StudyForge`.
 
 ---
 
