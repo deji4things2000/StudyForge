@@ -106,7 +106,7 @@ async function loadStudySets() {
                                 <span class="font-medium">${set.cardCount || 0} cards</span>
                                 <span>${formatDate(set.updatedAt?.toDate ? set.updatedAt.toDate() : set.updatedAt)}</span>
                             </div>
-                            <button onclick="window.location.hash='/study/${set.id}/flashcards'" class="w-full py-3 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-2xl hover:from-blue-100 hover:to-indigo-100 transition-all font-semibold group-hover:shadow-md">
+                            <button onclick="window.openStudyOptions('${set.id}')" class="w-full py-3 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-2xl hover:from-blue-100 hover:to-indigo-100 transition-all font-semibold group-hover:shadow-md">
                                 Study Now
                             </button>
                         </div>

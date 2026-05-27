@@ -45,7 +45,8 @@ export async function init(setId) {
             return;
         }
 
-        if (setData.cardType === 'mcq' || cards.some(card => Array.isArray(card.options) && card.options.length > 0)) {
+        // Treat as MCQ-only only when the set explicitly declares it, or when ALL cards have options
+        if (setData.cardType === 'mcq' || (cards.length > 0 && cards.every(card => Array.isArray(card.options) && card.options.length > 0))) {
             showError('This set is MCQ-only. Open the Learn mode instead.');
             return;
         }

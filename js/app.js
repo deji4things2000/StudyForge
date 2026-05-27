@@ -1,6 +1,8 @@
 // Premium App Module
 import { initAuth, currentUser } from './auth.js';
 import { initRouter, navigateTo } from './router.js';
+import { db } from './firebase-config.js';
+import { doc, getDoc, collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -91,4 +93,77 @@ window.handleLogout = async () => {
     const { logout } = await import('./auth.js');
     await logout();
     window.location.hash = '/';
+};
+
+// Open study options modal when user clicks "Study Now"
+window.openStudyOptions = async (setId) => {
+    try {
+        const setDoc = await getDoc(doc(db, 'studySets', setId));
+        if (!setDoc.exists()) {
+            window.location.hash = `/set/${setId}`;
+            return;
+        }
+
+        const setData = { id: setDoc.id, ...setDoc.data() };
+        const cardsQuery = query(collection(db, 'studySets', setId, 'cards'), orderBy('order', 'asc'));
+        const cardsSnapshot = await getDocs(cardsQuery);
+        const cards = cardsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const hasMcqImported = setData.cardType === 'mcq' || cards.some(c => Array.isArray(c.options) && c.options.length > 0);
+
+        if (!hasMcqImported) {
+            // Not an MCQ-capable set — go to flashcards as before
+            window.location.hash = `/study/${setId}/flashcards`;
+            return;
+        }
+
+        // Build modal
+        const existing = document.getElementById('studyOptionsModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'studyOptionsModal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="fixed inset-0 bg-black/40"></div>
+            <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full z-10 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold">Choose Study Mode</h3>
+                    <button id="closeStudyOptions" class="text-gray-500 hover:text-gray-700">✕</button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <button id="mcPracticeBtn" class="p-6 border rounded-xl text-left hover:shadow-lg transition">
+                        <div class="text-4xl mb-2">🧩</div>
+                        <div class="font-semibold">Multiple Choice</div>
+                        <div class="text-sm text-gray-600 mt-2">Practice with distractors built from the other answers in this set</div>
+                    </button>
+                    <button id="mcqTestBtn" class="p-6 border rounded-xl text-left bg-blue-50 hover:shadow-lg transition">
+                        <div class="text-2xl mb-2">✅</div>
+                        <div class="font-semibold">MCQ Test</div>
+                        <div class="text-sm text-gray-600 mt-2">Use imported Question + Option_A-D CSVs. The quiz randomizes the answer order and shows a full review at the end.</div>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        document.getElementById('closeStudyOptions').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        document.getElementById('mcPracticeBtn').addEventListener('click', () => {
+            modal.remove();
+            window.location.hash = `/study/${setId}/learn`;
+        });
+
+        document.getElementById('mcqTestBtn').addEventListener('click', () => {
+            modal.remove();
+            window.location.hash = `/study/${setId}/mcq`;
+        });
+    } catch (error) {
+        console.error('Error opening study options:', error);
+        window.location.hash = `/study/${setId}/flashcards`;
+    }
 };
