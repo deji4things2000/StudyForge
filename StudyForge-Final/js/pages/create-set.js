@@ -2,7 +2,11 @@
 import { db } from '../firebase-config.js';
 import { currentUser } from '../auth.js';
 import { collection, addDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { importAnkiDeck, importCSV } from '../utils/helpers.js';
+import { importAnkiDeck, importCSV, importMcqCSV } from '../utils/helpers.js';
+
+let cardCount = 2;
+let importType = 'flashcard';
+let cardMode = 'flashcard';
 
 export function render() {
     return `
@@ -56,10 +60,14 @@ export function render() {
                 </div>
 
                 <div class="mb-6">
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-3 gap-3">
                         <button type="button" id="csvImportBtn" class="import-type-btn p-4 rounded-xl border-2 transition border-gray-200 hover:border-gray-300">
                             <span class="text-3xl block mb-2">📄</span>
-                            <span class="font-medium">CSV File</span>
+                            <span class="font-medium">Flashcard CSV</span>
+                        </button>
+                        <button type="button" id="mcqImportBtn" class="import-type-btn p-4 rounded-xl border-2 transition border-gray-200 hover:border-gray-300">
+                            <span class="text-3xl block mb-2">🧩</span>
+                            <span class="font-medium">MCQ CSV</span>
                         </button>
                         <button type="button" id="ankiImportBtn" class="import-type-btn p-4 rounded-xl border-2 transition border-gray-200 hover:border-gray-300">
                             <span class="text-3xl block mb-2">📥</span>
@@ -70,6 +78,10 @@ export function render() {
 
                 <div id="importInstructions" class="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <p class="text-sm text-gray-700">Select import type above</p>
+                </div>
+
+                <div class="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-900">
+                    For MCQ quizzes, use <span class="font-semibold">Question, Option_A, Option_B, Option_C, Option_D</span>. Option_A is the correct answer, and StudyForge will randomize the answer order when the candidate takes the quiz.
                 </div>
 
                 <input type="file" id="importFileInput" accept=".csv,.txt" class="hidden">
@@ -85,13 +97,27 @@ export function render() {
     `;
 }
 
-function generateCard(number) {
+function generateCard(number, mode = 'flashcard') {
     return `
         <div class="card-item bg-white p-6 rounded-2xl shadow-lg border border-gray-100 animate-fade-in">
             <div class="flex justify-between items-center mb-4">
                 <span class="text-sm font-bold text-gray-500">CARD ${number}</span>
                 ${number > 2 ? '<button type="button" class="remove-card text-red-500 hover:text-red-700 transition" title="Remove">🗑️</button>' : ''}
             </div>
+            ${mode === 'mcq' ? `
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-500 uppercase font-semibold mb-2 block">Question</label>
+                    <textarea class="card-prompt w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" rows="3" required></textarea>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 uppercase font-semibold mb-2 block">Correct Answer</label>
+                    <input type="text" class="card-correct-answer w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" required>
+                </div>
+                <input type="hidden" class="card-options" value="">
+                <p class="text-xs text-gray-500 leading-relaxed">Wrong choices will be pulled from the other answers in this CSV when you study this set.</p>
+            </div>
+            ` : `
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label class="text-xs text-gray-500 uppercase font-semibold mb-2 block">Term</label>
@@ -102,8 +128,42 @@ function generateCard(number) {
                     <textarea class="card-definition w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" rows="3" required></textarea>
                 </div>
             </div>
+            `}
         </div>
     `;
+}
+
+function generateMcqCard(number) {
+    return generateCard(number, 'mcq');
+}
+
+function replaceCards(cards, mode = 'flashcard') {
+    cardMode = mode;
+    const container = document.getElementById('cardsContainer');
+    container.innerHTML = '';
+    cards.forEach((card, index) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.innerHTML = generateCard(index + 1, mode);
+        const cardElement = cardDiv.firstElementChild;
+        if (mode === 'mcq') {
+            cardElement.querySelector('.card-prompt').value = card.prompt || '';
+            cardElement.querySelector('.card-correct-answer').value = card.correctAnswer || '';
+            cardElement.querySelector('.card-options').value = JSON.stringify(card.options || []);
+        } else {
+            cardElement.querySelector('.card-term').value = card.term;
+            cardElement.querySelector('.card-definition').value = card.definition;
+        }
+        container.appendChild(cardElement);
+        
+        const removeBtn = cardElement.querySelector('.remove-card');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                cardElement.remove();
+                updateCardNumbers();
+            });
+        }
+    });
+    updateCardCount();
 }
 
 function replaceCards(cards) {
@@ -147,6 +207,10 @@ export function init() {
         return;
     }
 
+    cardCount = 2;
+    importType = 'flashcard';
+    cardMode = 'flashcard';
+
     let cardCount = 2;
     let importType = 'csv';
 
@@ -175,6 +239,7 @@ export function init() {
     const closeImportBtn = document.getElementById('closeImportBtn');
     const cancelImportBtn = document.getElementById('cancelImportBtn');
     const csvImportBtn = document.getElementById('csvImportBtn');
+    const mcqImportBtn = document.getElementById('mcqImportBtn');
     const ankiImportBtn = document.getElementById('ankiImportBtn');
     const selectFileBtn = document.getElementById('selectFileBtn');
     const importFileInput = document.getElementById('importFileInput');
@@ -193,21 +258,38 @@ export function init() {
     });
 
     csvImportBtn.addEventListener('click', () => {
-        importType = 'csv';
+        importType = 'flashcard';
+        cardMode = 'flashcard';
         importFileInput.accept = '.csv';
         csvImportBtn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
+        mcqImportBtn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
         ankiImportBtn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
         importInstructions.innerHTML = `
-            <p class="font-semibold mb-2 text-sm">CSV Format:</p>
+            <p class="font-semibold mb-2 text-sm">Flashcard CSV Format:</p>
             <code class="text-xs block bg-white p-2 rounded">Term,Definition<br>Hello,Hola<br>Goodbye,Adiós</code>
+        `;
+    });
+
+    mcqImportBtn.addEventListener('click', () => {
+        importType = 'mcq';
+        cardMode = 'mcq';
+        importFileInput.accept = '.csv';
+        mcqImportBtn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
+        csvImportBtn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
+        ankiImportBtn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
+        importInstructions.innerHTML = `
+            <p class="font-semibold mb-2 text-sm">MCQ CSV Format:</p>
+            <code class="text-xs block bg-white p-2 rounded">Question,Option_A,Option_B,Option_C,Option_D<br>What is 2+2?,4,3,5,6<br>Capital of France?,Paris,Lyon,Marseille,Nice</code>
         `;
     });
 
     ankiImportBtn.addEventListener('click', () => {
         importType = 'anki';
+        cardMode = 'flashcard';
         importFileInput.accept = '.txt';
         ankiImportBtn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
         csvImportBtn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
+        mcqImportBtn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
         importInstructions.innerHTML = `
             <p class="font-semibold mb-2 text-sm">Anki Format:</p>
             <code class="text-xs block bg-white p-2 rounded">Term[TAB]Definition<br>Each line is a card</code>
@@ -230,17 +312,27 @@ export function init() {
             if (importType === 'anki') {
                 cards = importAnkiDeck(content);
                 if (cards.length > 0) {
-                    replaceCards(cards);
+                    replaceCards(cards, 'flashcard');
                     importModal.classList.add('hidden');
                     alert(`Successfully imported ${cards.length} cards!`);
                 } else {
                     alert('No valid cards found in the file.');
                 }
+            } else if (importType === 'mcq') {
+                importMcqCSV(file, (importedCards) => {
+                    if (importedCards.length > 0) {
+                        replaceCards(importedCards, 'mcq');
+                        importModal.classList.add('hidden');
+                        alert(`Successfully imported ${importedCards.length} MCQ cards!`);
+                    } else {
+                        alert('No valid MCQ rows found in the file.');
+                    }
+                });
             } else {
                 // Use PapaParse for CSV
                 importCSV(file, (importedCards) => {
                     if (importedCards.length > 0) {
-                        replaceCards(importedCards);
+                        replaceCards(importedCards, 'flashcard');
                         importModal.classList.add('hidden');
                         alert(`Successfully imported ${importedCards.length} cards!`);
                     } else {
@@ -259,11 +351,62 @@ export function init() {
         
         const title = document.getElementById('setTitle').value.trim();
         const description = document.getElementById('setDescription').value.trim();
-        const terms = Array.from(document.querySelectorAll('.card-term')).map(el => el.value.trim()).filter(v => v);
-        const definitions = Array.from(document.querySelectorAll('.card-definition')).map(el => el.value.trim()).filter(v => v);
+        const isMcqMode = cardMode === 'mcq';
+        const cardsToSave = [];
 
-        if (terms.length === 0) {
-            alert('Please add at least one card with both term and definition');
+        if (isMcqMode) {
+            const cardElements = Array.from(document.querySelectorAll('.card-item'));
+
+            for (const cardElement of cardElements) {
+                const prompt = cardElement.querySelector('.card-prompt')?.value.trim();
+                const correctAnswer = cardElement.querySelector('.card-correct-answer')?.value.trim();
+                const optionsValue = cardElement.querySelector('.card-options')?.value || '[]';
+                let options = [];
+
+                try {
+                    options = JSON.parse(optionsValue);
+                } catch (error) {
+                    options = [];
+                }
+
+                if (!prompt || !correctAnswer) {
+                    continue;
+                }
+
+                cardsToSave.push({
+                    cardType: 'mcq',
+                    term: correctAnswer,
+                    definition: prompt,
+                    prompt,
+                    correctAnswer,
+                    options
+                });
+            }
+        } else {
+            const terms = Array.from(document.querySelectorAll('.card-term')).map(el => el.value.trim()).filter(v => v);
+            const definitions = Array.from(document.querySelectorAll('.card-definition')).map(el => el.value.trim()).filter(v => v);
+
+            if (terms.length === 0) {
+                alert('Please add at least one card with both term and definition');
+                return;
+            }
+
+            for (let i = 0; i < terms.length; i++) {
+                cardsToSave.push({
+                    cardType: 'flashcard',
+                    term: terms[i],
+                    definition: definitions[i]
+                });
+            }
+        }
+
+        if (cardsToSave.length === 0) {
+            alert(isMcqMode ? 'Please add at least one MCQ with a question and correct answer.' : 'Please add at least one card with both term and definition');
+            return;
+        }
+
+        if (isMcqMode && cardsToSave.length < 2) {
+            alert('Please add at least two MCQ rows so the app can build wrong choices from the other answers in the CSV.');
             return;
         }
 
@@ -278,13 +421,14 @@ export function init() {
                 ownerId: currentUser.uid,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                cardCount: terms.length
+                cardCount: cardsToSave.length,
+                cardType: isMcqMode ? 'mcq' : 'flashcard'
             });
 
-            for (let i = 0; i < terms.length; i++) {
+            for (let i = 0; i < cardsToSave.length; i++) {
+                const cardData = cardsToSave[i];
                 await setDoc(doc(db, 'studySets', setRef.id, 'cards', `card_${i}`), {
-                    term: terms[i],
-                    definition: definitions[i],
+                    ...cardData,
                     order: i
                 });
             }

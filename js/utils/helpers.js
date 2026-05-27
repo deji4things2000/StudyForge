@@ -107,6 +107,7 @@ export function importCSV(file, callback) {
 // Import MCQ CSV using PapaParse
 export function importMcqCSV(file, callback) {
     Papa.parse(file, {
+        skipEmptyLines: true,
         complete: (results) => {
             const cards = [];
 
@@ -122,12 +123,19 @@ export function importMcqCSV(file, callback) {
                 }
 
                 const prompt = cleanedRow[0];
-                const correctAnswer = cleanedRow[1];
+                const optionA = cleanedRow[1];
+                const optionB = cleanedRow[2];
+                const optionC = cleanedRow[3];
+                const optionD = cleanedRow[4];
+                const options = [optionA, optionB, optionC, optionD].filter(Boolean);
 
-                if (prompt && correctAnswer) {
+                if (prompt && optionA) {
                     cards.push({
                         prompt,
-                        correctAnswer
+                        correctAnswer: optionA,
+                        term: optionA,
+                        definition: prompt,
+                        options
                     });
                 }
             });

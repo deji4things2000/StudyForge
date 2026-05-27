@@ -104,6 +104,51 @@ export function importCSV(file, callback) {
     });
 }
 
+// Import MCQ CSV using PapaParse
+export function importMcqCSV(file, callback) {
+    Papa.parse(file, {
+        skipEmptyLines: true,
+        complete: (results) => {
+            const cards = [];
+
+            results.data.forEach((row, index) => {
+                if (!Array.isArray(row)) return;
+
+                const cleanedRow = row.map(cell => String(cell || '').trim());
+                if (!cleanedRow.some(Boolean)) return;
+
+                const firstCell = cleanedRow[0]?.toLowerCase();
+                if (index === 0 && (firstCell === 'question' || firstCell === 'prompt' || firstCell === 'term')) {
+                    return;
+                }
+
+                const prompt = cleanedRow[0];
+                const optionA = cleanedRow[1];
+                const optionB = cleanedRow[2];
+                const optionC = cleanedRow[3];
+                const optionD = cleanedRow[4];
+                const options = [optionA, optionB, optionC, optionD].filter(Boolean);
+
+                if (prompt && optionA) {
+                    cards.push({
+                        prompt,
+                        correctAnswer: optionA,
+                        term: optionA,
+                        definition: prompt,
+                        options
+                    });
+                }
+            });
+
+            callback(cards);
+        },
+        error: (error) => {
+            console.error('MCQ CSV parsing error:', error);
+            callback([]);
+        }
+    });
+}
+
 // Format date helper
 export function formatDate(date) {
     if (!date) return 'Unknown';

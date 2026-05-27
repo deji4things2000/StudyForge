@@ -80,6 +80,10 @@ export function render() {
                     <p class="text-sm text-gray-700">Select import type above</p>
                 </div>
 
+                <div class="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-900">
+                    For MCQ quizzes, use <span class="font-semibold">Question, Option_A, Option_B, Option_C, Option_D</span>. Option_A is the correct answer, and StudyForge will randomize the answer order when the candidate takes the quiz.
+                </div>
+
                 <input type="file" id="importFileInput" accept=".csv,.txt" class="hidden">
                 <button id="selectFileBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">
                     Select File
@@ -130,6 +134,7 @@ function generateMcqCard(number) {
                     <label class="text-xs text-gray-500 uppercase font-semibold mb-2 block">Correct Answer</label>
                     <input type="text" class="card-correct-answer w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" required>
                 </div>
+                <input type="hidden" class="card-options" value="">
                 <p class="text-xs text-gray-500 leading-relaxed">Wrong choices will be pulled from the other answers in this CSV when you study this set.</p>
             </div>
         </div>
@@ -151,6 +156,7 @@ function replaceCards(cards, mode = 'flashcard') {
         if (mode === 'mcq') {
             cardElement.querySelector('.card-prompt').value = card.prompt || '';
             cardElement.querySelector('.card-correct-answer').value = card.correctAnswer || '';
+            cardElement.querySelector('.card-options').value = JSON.stringify(card.options || []);
         } else {
             cardElement.querySelector('.card-term').value = card.term;
             cardElement.querySelector('.card-definition').value = card.definition;
@@ -257,7 +263,7 @@ export function init() {
         ankiImportBtn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
         importInstructions.innerHTML = `
             <p class="font-semibold mb-2 text-sm">MCQ CSV Format:</p>
-            <code class="text-xs block bg-white p-2 rounded">Question,Correct Answer<br>What is 2+2?,4<br>Capital of France?,Paris</code>
+            <code class="text-xs block bg-white p-2 rounded">Question,Option_A,Option_B,Option_C,Option_D<br>What is 2+2?,4,3,5,6<br>Capital of France?,Paris,Lyon,Marseille,Nice</code>
         `;
     });
 
@@ -338,6 +344,15 @@ export function init() {
             for (const cardElement of cardElements) {
                 const prompt = cardElement.querySelector('.card-prompt')?.value.trim();
                 const correctAnswer = cardElement.querySelector('.card-correct-answer')?.value.trim();
+                const optionsValue = cardElement.querySelector('.card-options')?.value || '[]';
+                let options = [];
+
+                try {
+                    options = JSON.parse(optionsValue);
+                } catch (error) {
+                    options = [];
+                }
+
                 if (!prompt || !correctAnswer) {
                     continue;
                 }
@@ -347,7 +362,8 @@ export function init() {
                     term: correctAnswer,
                     definition: prompt,
                     prompt,
-                    correctAnswer
+                    correctAnswer,
+                    options
                 });
             }
         } else {

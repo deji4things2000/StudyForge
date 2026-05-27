@@ -28,7 +28,7 @@
 
 ### Location:
 ```
-/Users/yairben-dor/XCode/StudyForge-Final/
+https://github.com/deji4things2000/StudyForge
 ```
 
 ### Deploy Steps:
@@ -36,7 +36,7 @@
 2. Create repository: `StudyForge` (Public)
 3. Upload ALL files from folder
 4. Settings → Pages → Source: `main` branch
-5. Live at: https://Sillybob123.github.io/StudyForge
+5. Live at: https://ai-agents-488209.web.app
 
 ---
 

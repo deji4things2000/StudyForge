@@ -108,6 +108,14 @@ function renderSetDetail(setData, cards) {
                         <h3 class="font-bold text-xl mb-2 text-gray-900">Multiple Choice</h3>
                         <p class="text-gray-600 text-sm">Practice with distractors built from the other answers in this set</p>
                     </a>
+
+                    <a href="#/study/${setData.id}/mcq" class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition border border-gray-100 group hover:-translate-y-1 duration-200">
+                        <div class="gradient-blue w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <span class="text-white text-2xl">✅</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-2 text-gray-900">MCQ Test</h3>
+                        <p class="text-gray-600 text-sm">Use imported Question + Option_A-D CSVs. The quiz randomizes the answer order and shows a full review at the end.</p>
+                    </a>
                 </div>
             ` : `
                 <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">

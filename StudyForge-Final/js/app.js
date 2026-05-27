@@ -50,8 +50,8 @@ function initComponents() {
                     <div class="text-center mb-4">
                         <p class="text-gray-400 mb-2">© 2025 StudyForge · Open-source learning platform</p>
                         <div class="flex justify-center space-x-6 mb-4">
-                            <a href="https://github.com/Sillybob123/StudyForge" target="_blank" class="text-gray-400 hover:text-white transition">GitHub</a>
-                            <a href="https://github.com/sponsors/Sillybob123" target="_blank" class="text-pink-400 hover:text-pink-300 transition">💝 Sponsor</a>
+                            <a href="https://github.com/deji4things2000/StudyForge" target="_blank" class="text-gray-400 hover:text-white transition">GitHub</a>
+                            <!-- Sponsor link removed -->
                         </div>
                     </div>
                     <div class="text-center text-sm text-gray-500">
